@@ -33,39 +33,21 @@ struct AddWordView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        saveWord()
+                        let newWord = Word(
+                            Phonetic: phonetic,
+                            Kanji: kanji,
+                            English: english,
+                            example: example,
+                            nextDueDate: Date()
+                        )
+                        var wordList = WordBankManager.shared.loadWordBank()
+                        wordList.append(newWord)
+                        WordBankManager.shared.saveWordBank(wordList)
                     }
                     .disabled(phonetic.isEmpty || english.isEmpty) // Disable save if required fields are empty
                 }
             }
         }
-    }
-
-    private func saveWord() {
-        let newWord = Word(
-            Phonetic: phonetic,
-            Kanji: kanji,
-            English: english,
-            example: example,
-            nextDueDate: Date()
-        )
-
-        // Retrieve the existing word bank from UserDefaults
-        var wordBank = loadWordBank()
-        wordBank.append(newWord)
-
-        // Save the updated word bank back to UserDefaults
-        if let encoded = try? JSONEncoder().encode(wordBank) {
-            UserDefaults.standard.set(encoded, forKey: "WordBank")
-        }
-    }
-
-    private func loadWordBank() -> [Word] {
-        if let data = UserDefaults.standard.data(forKey: "WordBank"),
-           let decoded = try? JSONDecoder().decode([Word].self, from: data) {
-            return decoded
-        }
-        return []
     }
 }
 

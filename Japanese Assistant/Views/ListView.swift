@@ -9,7 +9,7 @@ import SwiftUI
 import AVFoundation
 
 struct ListView: View {
-    @State var wordList: [Word] = [] // Make wordList mutable to allow adding new words
+    @State private var wordList: [Word] = [] // Load word bank from UserDefaults
     @State var order = [Side.Phonetic, Side.Kanji, Side.English]
     @State private var showRankingView = false
     @State private var showAddWordView = false
@@ -82,6 +82,9 @@ struct ListView: View {
                 }
             }
             .navigationTitle("Word List")
+            .onAppear {
+                wordList = WordBankManager.shared.loadWordBank()
+            }
             .sheet(isPresented: $showRankingView) {
                 RankingView(order: $order)
             }
@@ -99,9 +102,5 @@ struct ListView: View {
 }
 
 #Preview {
-    ListView(wordList: [
-        Word(id: UUID(), Phonetic: "こんにちは", Kanji: "", English: "Hello", example: "こんにちは、私の名前はジョンです", nextDueDate: Date()),
-        Word(id: UUID(), Phonetic: "ありがとう", Kanji: "", English: "Thank you", example: "ありがとう、お願いします", nextDueDate: Date()),
-        Word(id: UUID(), Phonetic: "くもり", Kanji: "曇り", English: "Cloudy", example: "今日はくもりです", nextDueDate: Date())
-    ])
+    ListView()
 }
