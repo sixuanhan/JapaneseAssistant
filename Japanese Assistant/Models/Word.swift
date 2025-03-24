@@ -9,9 +9,9 @@ import Foundation
 
 struct Word: Codable, Identifiable {
     var id = UUID()
-    let Phonetic: String
-    let Kanji: String
-    let English: String
-    let example: String
+    var Phonetic: String
+    var Kanji: String
+    var English: String
+    var example: String
     var nextDueDate: Date
 }

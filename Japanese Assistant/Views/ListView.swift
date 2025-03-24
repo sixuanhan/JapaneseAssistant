@@ -13,6 +13,8 @@ struct ListView: View {
     @State var order = [Side.Phonetic, Side.Kanji, Side.English]
     @State private var showRankingView = false
     @State private var showAddWordView = false
+    @State private var showEditWordView = false
+    @State private var selectedWord: Word? // Track the word to be edited
 
     private let speechSynthesizer = AVSpeechSynthesizer()
 
@@ -52,6 +54,15 @@ struct ListView: View {
                                             .padding()
                                     }
                                 }
+
+                                Button(action: {
+                                    selectedWord = word // Set the selected word
+                                    showEditWordView = true // Show the EditWordView
+                                    print("Edit word: \(word.Phonetic)")
+                                }) {
+                                    Image(systemName: "pencil")
+                                        .foregroundColor(.blue)
+                                }
                             }
                             .onTapGesture {
                                 readJapanese(word.Phonetic)
@@ -90,6 +101,14 @@ struct ListView: View {
             }
             .sheet(isPresented: $showAddWordView) {
                 AddWordView()
+            }
+            .sheet(isPresented: Binding(
+                get: { showEditWordView && selectedWord != nil },
+                set: { if !$0 { showEditWordView = false; selectedWord = nil } }
+            )) {
+                if let word = selectedWord {
+                    EditWordView(word: word)
+                }
             }
         }
     }

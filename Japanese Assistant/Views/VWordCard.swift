@@ -26,18 +26,22 @@ struct VWordCard: View {
                 // Show all three aspects and the example
                 VStack(spacing: 8) {
                     Text("\(word.Phonetic)")
+                        .foregroundColor(.black)
                         .font(.title2)
                         .fontWeight(.bold)
                     if word.Kanji != "" {
                         Text("\(word.Kanji)")
+                            .foregroundColor(.black)
                             .font(.title2)
                             .fontWeight(.bold)
                     }
                     Text("\(word.English)")
+                        .foregroundColor(.black)
                         .font(.title2)
                         .fontWeight(.bold)
                     Divider()
                     Text(word.example)
+                        .foregroundColor(.black)
                         .font(.subheadline)
                         .fontWeight(.light)
                         .padding(.top, 8)
@@ -47,23 +51,27 @@ struct VWordCard: View {
                 // Show only the front aspect
                 if front == .Phonetic {
                     Text(word.Phonetic)
+                        .foregroundColor(.black)
                         .font(.title)
                         .fontWeight(.bold)
                         .padding()
                 } else if front == .Kanji {
                     if word.Kanji == "" {
                         Text(word.Phonetic)
+                            .foregroundColor(.black)
                             .font(.title)
                             .fontWeight(.bold)
                             .padding()
                     } else {
                         Text(word.Kanji)
+                            .foregroundColor(.black)
                             .font(.title)
                             .fontWeight(.bold)
                             .padding()
                     }
                 } else if front == .English {
                     Text(word.English)
+                        .foregroundColor(.black)
                         .font(.title)
                         .fontWeight(.bold)
                         .padding()
@@ -73,7 +81,7 @@ struct VWordCard: View {
         .padding()
         .background(Color.white)
         .cornerRadius(10)
-        .shadow(radius: 5, x: 0, y: 2)
+        .shadow(radius: 5, x: 0, y: 2, color: Color.gray.opacity(0.5))
         .onTapGesture {
             flipped.toggle()
         }
