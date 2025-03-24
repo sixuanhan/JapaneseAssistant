@@ -27,4 +27,16 @@ class WordBankManager {
             UserDefaults.standard.set(encoded, forKey: wordBankKey)
         }
     }
+
+    func saveUpdatedWordToWordBank(word: Word) {
+        var wordBank = loadWordBank()
+
+        // Find the index of the word to update
+        if let index = wordBank.firstIndex(where: { $0.id == word.id }) {
+            wordBank[index] = word
+            saveWordBank(wordBank)
+        } else {
+            print("Error: Word not found in word bank.")
+        }
+    }
 }

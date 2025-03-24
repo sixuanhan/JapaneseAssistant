@@ -90,7 +90,7 @@ struct PracticeView: View {
         } else {
             wordList[currentIndex].nextDueDate = Calendar.current.date(byAdding: .minute, value: minutes, to: Date()) ?? Date()
         }
-        saveUpdatedWordToWordBank(word: wordList[currentIndex])
+        WordBankManager.shared.saveUpdatedWordToWordBank(word: wordList[currentIndex])
         moveToNextWord()
     }
 
@@ -103,18 +103,6 @@ struct PracticeView: View {
     private func loadAndShuffleWordList() {
         let allWords = WordBankManager.shared.loadWordBank()
         wordList = allWords.filter { $0.nextDueDate <= Date() }.shuffled()
-    }
-
-    private func saveUpdatedWordToWordBank(word: Word) {
-        var wordBank = WordBankManager.shared.loadWordBank()
-
-        // Find the index of the word to update
-        if let index = wordBank.firstIndex(where: { $0.id == word.id }) {
-            wordBank[index] = word
-            WordBankManager.shared.saveWordBank(wordBank)
-        } else {
-            print("Error: Word not found in word bank.")
-        }
     }
 }
 
