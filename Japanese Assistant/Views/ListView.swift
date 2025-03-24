@@ -86,8 +86,10 @@ struct ListView: View {
                         print("Refreshing word list...")
                         reloadWordList() // Reload the word list when the user pulls down
                     }
+                }
 
-                    // Floating + button
+                // Floating + button
+                GeometryReader { geometry in
                     VStack {
                         Spacer()
                         HStack {
@@ -104,6 +106,7 @@ struct ListView: View {
                                     .shadow(radius: 5)
                             }
                             .padding()
+                            .offset(x: -geometry.safeAreaInsets.trailing, y: -geometry.safeAreaInsets.bottom)
                         }
                     }
                 }

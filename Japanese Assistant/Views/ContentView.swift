@@ -9,19 +9,12 @@ import SwiftUI
 
 struct ContentView: View {
     enum tab {
-        case home
         case practice
         case list
     }
 
     var body: some View {
-        TabView {
-            HomeView()
-                .tabItem {
-                    Label("Home", systemImage: "house")
-                }
-                .tag(tab.home)
-            
+        TabView {        
             PracticeView()
                 .tabItem {
                     Label("Practice", systemImage: "pencil")
