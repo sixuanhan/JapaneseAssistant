@@ -8,9 +8,16 @@
 import SwiftUI
 
 struct PracticeView: View {
-    @State var wordList: [Word] // Make wordList mutable to update nextDueDate
+    @State private var wordList: [Word] // Filtered and shuffled word list
     @State private var currentIndex = 0 // Track the current word index
     @State private var flipped: Bool = false
+
+    init() {
+        wordList = WordBankManager.shared.loadWordBank()
+        // Filter words with nextDueDate earlier than now and shuffle them
+        let dueWords = wordList.filter { $0.nextDueDate <= Date() }.shuffled()
+        _wordList = State(initialValue: dueWords)
+    }
 
     var body: some View {
         VStack {
@@ -21,7 +28,7 @@ struct PracticeView: View {
                     flipped: $flipped,
                     front: randomFront()
                 )
-
+                
                 if flipped {
                     // Show buttons after the card is flipped
                     HStack {
@@ -77,9 +84,5 @@ struct PracticeView: View {
 }
 
 #Preview {
-    PracticeView(wordList: [
-        Word(id: UUID(), Phonetic: "こんにちは", Kanji: "", English: "Hello", example: "こんにちは、私の名前はジョンです", nextDueDate: Date()),
-        Word(id: UUID(), Phonetic: "ありがとう", Kanji: "", English: "Thank you", example: "ありがとう、お願いします", nextDueDate: Date()),
-        Word(id: UUID(), Phonetic: "くもり", Kanji: "曇り", English: "Cloudy", example: "今日はくもりです", nextDueDate: Date())
-    ])
+    PracticeView()
 }

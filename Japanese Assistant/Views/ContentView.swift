@@ -22,11 +22,7 @@ struct ContentView: View {
                 }
                 .tag(tab.home)
             
-            PracticeView(wordList: [
-                Word(id: UUID(), Phonetic: "こんにちは", Kanji: "", English: "Hello", example: "こんにちは、私の名前はジョンです", nextDueDate: Date()),
-                Word(id: UUID(), Phonetic: "ありがとう", Kanji: "", English: "Thank you", example: "ありがとう、お願いします", nextDueDate: Date()),
-                Word(id: UUID(), Phonetic: "くもり", Kanji: "曇り", English: "Cloudy", example: "今日はくもりです", nextDueDate: Date())
-            ])
+            PracticeView()
                 .tabItem {
                     Label("Practice", systemImage: "pencil")
                 }
