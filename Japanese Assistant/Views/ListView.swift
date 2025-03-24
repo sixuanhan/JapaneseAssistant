@@ -71,6 +71,10 @@ struct ListView: View {
                     }
                     .padding()
                 }
+                .refreshable {
+                    print("Refreshing word list...")
+                    reloadWordList() // Reload the word list when the user pulls down
+                }
 
                 // Floating + button
                 VStack {
@@ -94,7 +98,7 @@ struct ListView: View {
             }
             .navigationTitle("Word List")
             .onAppear {
-                wordList = WordBankManager.shared.loadWordBank()
+                reloadWordList()
             }
             .sheet(isPresented: $showRankingView) {
                 RankingView(order: $order)
@@ -117,6 +121,10 @@ struct ListView: View {
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AVSpeechSynthesisVoice(language: "ja-JP")
         speechSynthesizer.speak(utterance)
+    }
+
+    private func reloadWordList() {
+        wordList = WordBankManager.shared.loadWordBank()
     }
 }
 

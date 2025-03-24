@@ -81,7 +81,7 @@ struct VWordCard: View {
         .padding()
         .background(Color.white)
         .cornerRadius(10)
-        .shadow(radius: 5, x: 0, y: 2, color: Color.gray.opacity(0.5))
+        .shadow(color: Color.gray.opacity(0.5), radius: 5, x: 0, y: 2)
         .onTapGesture {
             flipped.toggle()
         }
