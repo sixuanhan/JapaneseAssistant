@@ -34,12 +34,12 @@ struct HomeView: View {
     }
 
     func addWord() {
-        translationService.translate(text: inputText) { translatedText in
-            if let translatedText = translatedText {
-                vocabList.append(translatedText)
-                inputText = ""
-            }
-        }
+        // translationService.translate(text: inputText) { translatedText in
+        //     if let translatedText = translatedText {
+        //         vocabList.append(translatedText)
+        //         inputText = ""
+        //     }
+        // }
     }
 }
 
