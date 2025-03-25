@@ -99,7 +99,6 @@ struct AddWordView: View {
         var wordList = WordBankManager.shared.loadWordBank()
         wordList.append(newWord)
         WordBankManager.shared.saveWordBank(wordList)
-        dismiss()
     }
 }
 

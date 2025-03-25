@@ -70,6 +70,8 @@ struct PracticeView: View {
                         .padding()
                     }
                 } else {
+                    Spacer()
+                    
                     Text("Practice Complete!")
                         .font(.title)
                         .padding()
