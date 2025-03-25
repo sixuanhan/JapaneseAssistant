@@ -12,7 +12,7 @@ struct VWordCard: View {
 
     @Binding private var flipped: Bool
 
-    @State private var front: Side = .Phonetic
+    private var front: Side
 
     init(word: Word, flipped: Binding<Bool>, front: Side) {
         self.word = word

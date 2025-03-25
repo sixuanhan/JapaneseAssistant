@@ -80,7 +80,8 @@ struct PracticeView: View {
 
     // Randomly initialize the front of the card
     private func randomFront() -> Side {
-        return Side.allCases.randomElement() ?? .Phonetic
+        let side = Side.allCases.randomElement() ?? .Phonetic
+        return side
     }
 
     // Update the nextDueDate and move to the next word
