@@ -23,7 +23,7 @@ struct ListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                VStack {
+                VStack() {
                     // Search Bar
                     TextField("Search words...", text: $searchQuery)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -111,7 +111,7 @@ struct ListView: View {
                     }
                 }
             }
-            .navigationTitle("Word List")
+            .navigationTitle("Word List: \(wordList.count) words")
             .onAppear {
                 reloadWordList()
             }
