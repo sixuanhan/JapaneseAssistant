@@ -153,7 +153,6 @@ struct ListView: View {
                 word.English.localizedCaseInsensitiveContains(searchQuery)
             }
         }
-        print("Filtered word list count: \(filteredWordList.count)")
     }
 }
 

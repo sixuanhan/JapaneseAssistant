@@ -27,16 +27,16 @@ struct PracticeView: View {
                     .font(.title2)
                     .padding()
             } else {
-                HStack {
-                    Spacer()
-                    Text("\(currentIndex + 1)/\(wordList.count)")
-                        .font(.title2)
-                        .padding()
-                }
-
-                Spacer()
-
                 if currentIndex < wordList.count {
+                    HStack {
+                        Spacer()
+                        Text("\(currentIndex + 1)/\(wordList.count)")
+                            .font(.title2)
+                            .padding()
+                    }
+
+                    Spacer()
+
                     // Show the current word's VWordCard
                     VWordCard(
                         word: wordList[currentIndex],
