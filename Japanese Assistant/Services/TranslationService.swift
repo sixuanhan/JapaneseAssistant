@@ -1,9 +1,9 @@
 import Foundation
 
 class TranslationService {
-    private let deepLApiKey = "8176be1b-28ed-4cab-a7b4-bde49c1a5d74:fx" // Replace with your DeepL API key
+    private let deepLApiKey = "" // Replace with your DeepL API key
     private let deepLApiUrl = "https://api-free.deepl.com/v2/translate"
-    private let kanjiAliveApiKey = "0b818a7ed4mshd08b11ea3fb9fd7p12a31ejsn0652ff8c02c0" // Replace with your Kanji Alive API key
+    private let kanjiAliveApiKey = "" // Replace with your Kanji Alive API key
     private let kanjiAliveApiUrl = "https://kanjialive-api.p.rapidapi.com/api/public/kanji/"
 
     func translate(text: String, completion: @escaping (Word?) -> Void) {
