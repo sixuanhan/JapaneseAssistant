@@ -19,7 +19,7 @@ class TranslationService {
         request.setValue("DeepL-Auth-Key \(deepLApiKey)", forHTTPHeaderField: "Authorization")
 
         // Detect if the input is Japanese or English
-        let isInputJapanese = isJapanese(text)
+        let isInputJapanese = JapaneseIdentifier.shared.isJapanese(text)
         let sourceLang = isInputJapanese ? "JA" : "EN"
         let targetLang = isInputJapanese ? "EN" : "JA"
 
@@ -60,7 +60,7 @@ class TranslationService {
                     var english = ""
 
                     if isInputJapanese {
-                        if self.isKanji(text) {
+                        if JapaneseIdentifier.shared.isKanji(text) {
                             kanji = text
                             english = translatedText
                         } else {
@@ -68,7 +68,7 @@ class TranslationService {
                             english = translatedText
                         }
                     } else {
-                        if self.isKanji(translatedText) {
+                        if JapaneseIdentifier.shared.isKanji(translatedText) {
                             kanji = translatedText
                             english = text
                         } else {
@@ -200,11 +200,63 @@ class TranslationService {
         }
     }
 
-    private func isJapanese(_ text: String) -> Bool {
-        return text.range(of: "\\p{Han}|\\p{Hiragana}|\\p{Katakana}", options: .regularExpression) != nil
-    }
+    func simpleTranslate(text: String, completion: @escaping (String?) -> Void) {
+        guard let url = URL(string: deepLApiUrl) else {
+            print("Error: Invalid DeepL API URL")
+            completion(nil)
+            return
+        }
 
-    private func isKanji(_ text: String) -> Bool {
-        return text.range(of: "\\p{Han}", options: .regularExpression) != nil
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("DeepL-Auth-Key \(deepLApiKey)", forHTTPHeaderField: "Authorization")
+
+        // Detect if the input is Japanese or English
+        let isInputJapanese = JapaneseIdentifier.shared.isJapanese(text)
+        let sourceLang = isInputJapanese ? "JA" : "EN"
+        let targetLang = isInputJapanese ? "EN" : "JA"
+
+        // Prepare the request body
+        let requestBody: [String: Any] = [
+            "text": [text],
+            "source_lang": sourceLang,
+            "target_lang": targetLang
+        ]
+
+        request.httpBody = try? JSONSerialization.data(withJSONObject: requestBody, options: [])
+
+        // Perform the DeepL API request
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+
+            guard let data = data else {
+                print("Error: No data received from DeepL API")
+                completion(nil)
+                return
+            }
+
+            do {
+                // Parse the DeepL API response
+                let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+                // print("DeepL API Response: \(json ?? [:])")
+
+                if let translations = json?["translations"] as? [[String: Any]],
+                   let firstTranslation = translations.first,
+                   let translatedText = firstTranslation["text"] as? String {  
+                    completion(translatedText)
+                } else {
+                    print("Error: Unexpected response format from DeepL API")
+                    completion(nil)
+                }
+            } catch {
+                print("Error parsing DeepL API response: \(error.localizedDescription)")
+                completion(nil)
+            }
+        }.resume()
     }
 }

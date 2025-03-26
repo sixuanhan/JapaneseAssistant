@@ -18,12 +18,10 @@ struct ListView: View {
     @State private var showEditWordView = false
     @State private var selectedWord: Word? // Track the word to be edited
 
-    private let speechSynthesizer = AVSpeechSynthesizer()
-
     var body: some View {
         NavigationStack {
             ZStack {
-                VStack() {
+                VStack {
                     // Search Bar
                     TextField("Search words...", text: $searchQuery)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -37,47 +35,16 @@ struct ListView: View {
                             // First row: Display the order
                             GridRow {
                                 ForEach(order, id: \.self) { side in
-                                    Text(side.rawValue.uppercased())
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                        .padding()
+                                    headerText(for: side)
                                 }
                             }
                             .onTapGesture {
                                 showRankingView = true
                             }
 
-                            // Subsequent rows: Display the filtered words in the specified order
-                            ForEach(filteredWordList) { word in
-                                GridRow {
-                                    ForEach(order, id: \.self) { side in
-                                        if side == .Phonetic {
-                                            Text(word.Phonetic)
-                                                .font(.body)
-                                                .padding()
-                                        } else if side == .Kanji {
-                                            Text(word.Kanji)
-                                                .font(.body)
-                                                .padding()
-                                        } else if side == .English {
-                                            Text(word.English)
-                                                .font(.body)
-                                                .padding()
-                                        }
-                                    }
-
-                                    Button(action: {
-                                        selectedWord = word // Set the selected word
-                                        showEditWordView = true // Show the EditWordView
-                                        print("Edit word: \(word.Phonetic)")
-                                    }) {
-                                        Image(systemName: "pencil")
-                                            .foregroundColor(.blue)
-                                    }
-                                }
-                                .onTapGesture {
-                                    readJapanese(word.Phonetic)
-                                }
+                            // Subsequent rows: Display the filtered words in the reverse order
+                            ForEach(filteredWordList.reversed(), id: \.id) { word in
+                                wordRow(for: word)
                             }
                         }
                         .padding()
@@ -132,11 +99,53 @@ struct ListView: View {
         }
     }
 
-    private func readJapanese(_ text: String) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "ja-JP")
-        speechSynthesizer.speak(utterance)
+    // MARK: - Helper Views
+
+    private func headerText(for side: Side) -> some View {
+        Text(side.rawValue.uppercased())
+            .font(.headline)
+            .foregroundColor(.primary)
+            .padding()
     }
+
+    private func wordRow(for word: Word) -> some View {
+        GridRow {
+            ForEach(order, id: \.self) { side in
+                wordText(for: word, side: side)
+            }
+
+            Button(action: {
+                selectedWord = word // Set the selected word
+                showEditWordView = true // Show the EditWordView
+                print("Edit word: \(word.Phonetic)")
+            }) {
+                Image(systemName: "pencil")
+                    .foregroundColor(.blue)
+            }
+        }
+        .onTapGesture {
+            SpeechManager.shared.readJapanese(text: word.Phonetic)
+        }
+    }
+
+    private func wordText(for word: Word, side: Side) -> some View {
+        switch side {
+        case .Phonetic:
+            return Text(word.Phonetic)
+                .font(.body)
+                .padding()
+        case .Kanji:
+            return Text(word.Kanji)
+                .font(.body)
+                .padding()
+        case .English:
+            return Text(word.English)
+                .font(.body)
+                .padding()
+        }
+    }
+
+    // MARK: - Helper Methods
 
     private func reloadWordList() {
         wordList = WordBankManager.shared.loadWordBank()
