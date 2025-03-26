@@ -47,6 +47,7 @@ struct TranslationView: View {
                 }) {
                     Image(systemName: "speaker.wave.2.fill")
                 }
+                .padding()
             }
             .padding()
             .disabled(inputText.isEmpty || isTranslating) // Disable if input is empty or translating
