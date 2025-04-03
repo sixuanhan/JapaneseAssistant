@@ -6,14 +6,16 @@
 //
 
 import SwiftUI
+import WebKit
 
 struct EditWordView: View {
     @State private var phonetic: String
     @State private var kanji: String
     @State private var english: String
     @State private var example: String
+    @State private var showWebView = false
     @Environment(\.dismiss) var dismiss
-    var word: Word // The word to be edited
+    var word: Word
 
     init(word: Word) {
         self.word = word
@@ -39,6 +41,12 @@ struct EditWordView: View {
                     } label: {
                         Text("Delete Word")
                     }
+
+                    Button {
+                        showWebView = true // Show the overlay with the web view
+                    } label: {
+                        Text("Search word")
+                    }
                 }
 
                 Section {
@@ -60,40 +68,28 @@ struct EditWordView: View {
                     .disabled(phonetic.isEmpty || english.isEmpty) // Disable save if required fields are empty
                 }
             }
+            .sheet(isPresented: $showWebView) {
+                WebView(url: URL(string: "https://takoboto.jp/?q=\(phonetic.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")")!)
+            }
         }
     }
 
     private func saveChanges() {
-        // Load the current word bank
         var wordList = WordBankManager.shared.loadWordBank()
-
-        // Find the index of the word to be edited
         if let index = wordList.firstIndex(where: { $0.id == word.id }) {
-            // Update the word's properties
             wordList[index].Phonetic = phonetic
             wordList[index].Kanji = kanji
             wordList[index].English = english
             wordList[index].example = example
-
-            // Save the updated word bank back to UserDefaults
             WordBankManager.shared.saveWordBank(wordList)
         }
-
-        // Dismiss the view
         dismiss()
     }
 
     private func deleteWord() {
-        // Load the current word bank
         var wordList = WordBankManager.shared.loadWordBank()
-
-        // Remove the word from the word bank
         wordList.removeAll { $0.id == word.id }
-
-        // Save the updated word bank back to UserDefaults
         WordBankManager.shared.saveWordBank(wordList)
-
-        // Dismiss the view
         dismiss()
     }
 
@@ -102,6 +98,20 @@ struct EditWordView: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - WebView for Displaying the Webpage
+struct WebView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> WKWebView {
+        return WKWebView()
+    }
+
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        let request = URLRequest(url: url)
+        uiView.load(request)
     }
 }
 
