@@ -18,14 +18,14 @@ struct KnowledgeView: View {
                 TextField("Search knowledge...", text: $searchQuery)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding()
-                    .onChange(of: searchQuery) { _ in
+                    .onChange(of: searchQuery) {
                         filterCards()
                     }
 
                 // List of Knowledge Cards
                 List {
-                    ForEach(knowledgeCards) { knowledge in
-                        NavigationLink(destination: KnowledgeCard(knowledge: .constant(knowledge))) {
+                    ForEach($knowledgeCards) { $knowledge in
+                        NavigationLink(destination: KnowledgeCard(knowledge: $knowledge)) {
                             Text(knowledge.text.components(separatedBy: "\n").first ?? knowledge.text)
                                 .padding()
                         }

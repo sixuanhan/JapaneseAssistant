@@ -20,8 +20,8 @@ struct ChatView: View {
                     if aiResponse.isEmpty && !userInput.isEmpty {
                         ProgressView()
                             .padding(.horizontal)
-                    } else if let knowledge = knowledge {
-                        KnowledgeCard(knowledge: .constant(knowledge))
+                    } else if !aiResponse.isEmpty && !userInput.isEmpty {
+                        KnowledgeCard(knowledge: Binding($knowledge)!)
                     }
                 }
 
@@ -31,9 +31,9 @@ struct ChatView: View {
                 HStack {
                     TextField("Ask anything...", text: $text)
                         .padding()
-                        .background(Color.white)
+                        .background(Color.primary)
                         .cornerRadius(20)
-                        .foregroundColor(.black)
+                        .foregroundColor(Color(UIColor.systemBackground))
                         .frame(height: 50)
 
                     Button(action: send) {
@@ -111,4 +111,5 @@ extension UIApplication {
 
 #Preview {
     ChatView()
+    .preferredColorScheme(.dark)
 }
