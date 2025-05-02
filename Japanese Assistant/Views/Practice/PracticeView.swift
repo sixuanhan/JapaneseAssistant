@@ -53,17 +53,22 @@ struct PracticeView: View {
                             .buttonStyle(.bordered)
 
                             Button("Hard") {
-                                updateNextDueDate(minutes: 6)
+                                updateNextDueDate(minutes: 5)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("OK") {
+                                updateNextDueDate(minutes: 60)
                             }
                             .buttonStyle(.bordered)
 
                             Button("Good") {
-                                updateNextDueDate(minutes: 10)
+                                updateNextDueDate(days: 5)
                             }
                             .buttonStyle(.bordered)
 
                             Button("Easy") {
-                                updateNextDueDate(days: 5)
+                                updateNextDueDate(days: 15)
                             }
                             .buttonStyle(.bordered)
                         }

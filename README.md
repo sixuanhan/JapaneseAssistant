@@ -1,0 +1,70 @@
+# README: Japanese Assistant
+
+## Overview
+
+Japanese Assistant is a Swift-based iOS application designed to help users learn and manage Japanese language concepts. The app provides features such as chat-based AI assistance, knowledge card management, vocabulary flashcards, and integration with external resources for enhanced learning.
+
+## Features
+
+1. **Chat with AI:**
+    Ask questions about Japanese grammar, vocabulary, or culture. Receive detailed, structured responses from an AI-powered assistant.
+2. **Knowledge Cards:**
+    Save AI responses as editable knowledge cards. Organize and manage knowledge cards for future reference. Edit and save changes to knowledge cards dynamically.
+3. **Collect and Manage Vocabularies:**
+    CRUD, sort, and filter your vocabularies in the "List" tab. Click on them to listen, and search for more details in "Edit".
+4. **Practice Vocabularies:**
+   Use Anki-style vocabulary memorization technique to refresh your memory in the "Practice" tab.
+5. **Translation:**
+   Translate between English and Japanese instantly. Copy paste or listen to them.
+
+## Installation
+
+1. Clone the repository:
+
+    ```bash
+    git clone https://github.com/sixuanhan/JapaneseAssistant.git
+    ```
+
+2. Open the project in Xcode
+3. Ensure you have the latest version of Xcode and Swift installed.
+4. Run the app on a simulator or a connected iOS device.
+
+## Dependencies
+
+- SwiftUI: For building the user interface.
+- GoogleGenerativeAI: For AI-powered chat functionality.
+- DeepL: For translation.
+- kanjiAlive: For translating Kanji to Hiragana.
+
+## Known Issues
+
+- Since there is no perfect sentence-in-kanji-to-sentence-in-hiragana translating API, the app uses kanjiAlive to translate each Kanji to Hiragana when adding a word. It is rarely accurate, so please always check the Hiragana to make sure it is correct.
+
+## Future Enhancements
+
+- Moving database from UserDefault to a cloud database.
+- Add support for exporting knowledge cards as PDFs or text files.
+- Integrate directly with Duolingo.
+
+## Contributing
+
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix:
+
+   ```bash
+   git checkout -b feature-name
+   ```
+
+3. Commit your changes:
+
+   ```bash
+   git commit -m "Add feature-name"
+   ```
+
+4. Push to your branch:
+
+    ```bash
+    git push origin feature-name
+    ```
+
+5. Submit a pull request.

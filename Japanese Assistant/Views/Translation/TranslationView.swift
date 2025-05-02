@@ -11,6 +11,7 @@ struct TranslationView: View {
     @State private var inputText: String = ""
     @State private var isTranslating = false
     @State private var displayedText = ""
+    @State private var showCopyAlert = false // State to control the alert visibility
 
     private let translationService = TranslationService()
 
@@ -23,7 +24,7 @@ struct TranslationView: View {
                 .frame(height: 50)
 
             HStack {
-                // clear input
+                // Clear input
                 Button(action: {
                     inputText = ""
                 }) {
@@ -31,6 +32,7 @@ struct TranslationView: View {
                 }
                 .padding()
 
+                // Translate input
                 Button(action: {
                     translateInput()
                 }) {
@@ -38,6 +40,7 @@ struct TranslationView: View {
                 }
                 .padding()
 
+                // Read text aloud
                 Button(action: {
                     if JapaneseIdentifier.shared.isJapanese(inputText) {
                         SpeechManager.shared.readJapanese(text: inputText)
@@ -48,6 +51,15 @@ struct TranslationView: View {
                     Image(systemName: "speaker.wave.2.fill")
                 }
                 .padding()
+
+                // Copy translated text to clipboard
+                Button(action: {
+                    copyToClipboard()
+                }) {
+                    Image(systemName: "doc.on.doc")
+                }
+                .padding()
+                .disabled(displayedText.isEmpty) // Disable if there's no translated text
             }
             .padding()
             .disabled(inputText.isEmpty || isTranslating) // Disable if input is empty or translating
@@ -60,6 +72,9 @@ struct TranslationView: View {
             // Display the translated word
             Text(displayedText)
                 .padding()
+        }
+        .alert("Copied to Clipboard", isPresented: $showCopyAlert) {
+            Button("OK", role: .cancel) {}
         }
     }
 
@@ -75,6 +90,18 @@ struct TranslationView: View {
                 }
             }
         }
+    }
+
+    private func copyToClipboard() {
+        #if os(iOS)
+        UIPasteboard.general.string = displayedText
+        #elseif os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(displayedText, forType: .string)
+        #endif
+
+        // Show the "Copied to Clipboard" alert
+        showCopyAlert = true
     }
 }
 

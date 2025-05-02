@@ -12,6 +12,8 @@ struct ContentView: View {
         case translation
         case practice
         case list
+        case knowledge
+        case chat
     }
 
     var body: some View {
@@ -21,6 +23,12 @@ struct ContentView: View {
                     Label("List", systemImage: "list.bullet")
                 }
                 .tag(tab.list)
+            
+            KnowledgeView()
+                .tabItem {
+                    Label("Knowledge", systemImage: "book")
+                }
+                .tag(tab.knowledge)
 
             PracticeView()
                 .tabItem {
@@ -33,6 +41,12 @@ struct ContentView: View {
                     Label("Translation", systemImage: "text.bubble")
                 }
                 .tag(tab.translation)
+            
+            ChatView()
+                .tabItem {
+                    Label("Chat", systemImage: "message")
+                }
+                .tag(tab.chat)
         }
     }
 }
