@@ -4,6 +4,10 @@
 
 Japanese Assistant is a Swift-based iOS application designed to help users learn and manage Japanese language concepts. The app provides features such as chat-based AI assistance, knowledge card management, vocabulary flashcards, and integration with external resources for enhanced learning.
 
+## Updates
+
+The Google Generative AI API has been deprecated recently. New modifications aim to resolve this issue.
+
 ## Features
 
 1. **Chat with AI:**
@@ -25,9 +29,11 @@ Japanese Assistant is a Swift-based iOS application designed to help users learn
     git clone https://github.com/sixuanhan/JapaneseAssistant.git
     ```
 
-2. Open the project in Xcode
+2. Open the project in Xcode.
 3. Ensure you have the latest version of Xcode and Swift installed.
-4. Run the app on a simulator or a connected iOS device.
+4. Change your team and bundle ID to a unique bundle ID under "Signing and Capabilities" in XCode.
+   ![Signing and Capabilities](/Japanese%20Assistant/Images/signing.png)
+5. Run the app on a simulator or a connected iOS device.
 
 ## Dependencies
 

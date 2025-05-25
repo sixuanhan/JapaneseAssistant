@@ -42,11 +42,11 @@ struct ContentView: View {
                 }
                 .tag(tab.translation)
             
-            ChatView()
-                .tabItem {
-                    Label("Chat", systemImage: "message")
-                }
-                .tag(tab.chat)
+//            ChatView()
+//                .tabItem {
+//                    Label("Chat", systemImage: "message")
+//                }
+//                .tag(tab.chat)
         }
     }
 }
