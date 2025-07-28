@@ -45,6 +45,22 @@ The Google Generative AI API has been deprecated recently. New modifications aim
 - DeepL: For translation. Replace API key in `TranslationService`. Get an API key [here](https://www.deepl.com/en/pro-api?utm_term=&utm_campaign=US%7CPMAX%7CC%7CEnglish&utm_source=google&utm_medium=paid&hsa_acc=1083354268&hsa_cam=21607908173&hsa_grp=&hsa_ad=&hsa_src=x&hsa_tgt=&hsa_kw=&hsa_mt=&hsa_net=adwords&hsa_ver=3&gad_source=1&gad_campaignid=21601196877&gbraid=0AAAAABbqoWDqz0tCSD0Yxn1Cz8U8rNjvu&gclid=Cj0KCQjw2tHABhCiARIsANZzDWoBescJx2hzrKI_Q0zYkHSI3fecNC0P_Ux-u3WODBp4KsRJ8JnNXn4aAtZzEALw_wcB#api-pricing).
 - kanjiAlive: For translating Kanji to Hiragana. Replace API key in `TranslationService`. Get an API key [here](https://app.kanjialive.com/api/docs).
 
+## Bundle ID error
+
+This should not happen to you, but if you ever get an error saying that there is a conflict with your bundle ID, that means someone took your bundle ID. If you still have the old app with the conflicted bundle ID installed on your phone, this is what you should do:
+
+1. Go to XCode and connect to your iPhone.
+2. In Window -> Devices and Simulators, you should see the old app's identifier in the "INSTALLED APPS" section.
+3. Click on that old app, and then click on the ... icon below this section. Click on Download Container. Download it to anywhere you like.
+4. Right click on the .xcappdata file. Click on "Show Package Contents".
+5. Find AppData -> Library -> Preferences -> the .plist file with your old bundle ID. Copy that to the root directory of your repo.
+6. Go to line 23 of DebugToolsView. Change the forResource string to your old bundle ID.
+7. Go to Japanese_AssitantApp. Uncomment line 27 and comment line 26.
+8. Run the app on your phone. Click on the "Restore Old UserDefaults" button.
+9. Once that is successful, Go to Japanese_AssitantApp. Uncomment line 26 and comment line 27.
+10. Delete the .plist file you copied over in step 5.
+11. Run the app on your phone. You should see all your data. Then you can delete the old app.
+
 ## Known Issues
 
 - Since there is no perfect sentence-in-kanji-to-sentence-in-hiragana translating API, the app uses kanjiAlive to translate each Kanji to Hiragana when adding a word. It is rarely accurate, so please always check the Hiragana to make sure it is correct.
