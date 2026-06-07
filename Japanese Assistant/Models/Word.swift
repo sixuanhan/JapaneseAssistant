@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Word: Codable, Identifiable {
+struct Word: Codable, Identifiable, Hashable {
     var id = UUID()
     var Phonetic: String
     var Kanji: String

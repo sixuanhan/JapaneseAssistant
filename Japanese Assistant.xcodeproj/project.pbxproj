@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		227571E22DE2C49F000B47EA /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 227571E12DE2C49F000B47EA /* FirebaseAI */; };
 		227571E42DE2C49F000B47EA /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 227571E32DE2C49F000B47EA /* FirebaseAnalytics */; };
+		227571E62DE2C49F000B47EA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 227571E52DE2C49F000B47EA /* FirebaseAuth */; };
+		227571E82DE2C49F000B47EA /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 227571E72DE2C49F000B47EA /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +32,8 @@
 			files = (
 				227571E42DE2C49F000B47EA /* FirebaseAnalytics in Frameworks */,
 				227571E22DE2C49F000B47EA /* FirebaseAI in Frameworks */,
+				227571E62DE2C49F000B47EA /* FirebaseAuth in Frameworks */,
+				227571E82DE2C49F000B47EA /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,6 +78,8 @@
 			packageProductDependencies = (
 				227571E12DE2C49F000B47EA /* FirebaseAI */,
 				227571E32DE2C49F000B47EA /* FirebaseAnalytics */,
+				227571E52DE2C49F000B47EA /* FirebaseAuth */,
+				227571E72DE2C49F000B47EA /* FirebaseFirestore */,
 			);
 			productName = "Japanese Assistant";
 			productReference = 229D87282D140ABB00097A9C /* Japanese Assistant.app */;
@@ -364,6 +370,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 227571E02DE2C49F000B47EA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseAnalytics;
+		};
+		227571E52DE2C49F000B47EA /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 227571E02DE2C49F000B47EA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		227571E72DE2C49F000B47EA /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 227571E02DE2C49F000B47EA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

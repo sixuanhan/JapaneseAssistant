@@ -2,7 +2,9 @@
 //  KnowledgeManager.swift
 //  Japanese Assistant
 //
-//  Created by xuanxuan on 4/3/25.
+//  Offline-first facade. Reads and writes hit the local UserDefaults
+//  cache via LocalDataStore. Writes additionally notify AuthViewModel,
+//  which queues a Firestore sync that replays when connectivity returns.
 //
 
 import Foundation
@@ -10,39 +12,38 @@ import Foundation
 class KnowledgeManager {
     static let shared = KnowledgeManager()
 
-    private let knowledgeKey = "KnowledgeCards"
-        
+    @MainActor
     func loadKnowledgeCards() -> [Knowledge] {
-        if let data = UserDefaults.standard.data(forKey: knowledgeKey),
-           let decoded = try? JSONDecoder().decode([Knowledge].self, from: data) {
-            return decoded
-        }
-        return []
+        let uid = AuthViewModel.shared?.userSession?.uid
+        return LocalDataStore.loadKnowledgeCards(uid: uid)
     }
 
+    @MainActor
     func saveKnowledgeCards(_ knowledgeCards: [Knowledge]) {
-        if let encoded = try? JSONEncoder().encode(knowledgeCards) {
-            UserDefaults.standard.set(encoded, forKey: knowledgeKey)
+        if let auth = AuthViewModel.shared, auth.userSession != nil {
+            auth.setKnowledgeCards(knowledgeCards)
+        } else {
+            LocalDataStore.saveKnowledgeCards(knowledgeCards, uid: nil)
         }
     }
 
+    /// Updates an existing card in place, or appends it if new.
+    @MainActor
     func saveUpdatedWordToWordBank(knowledge: Knowledge) {
         var knowledgeCards = loadKnowledgeCards()
-
-        // Find the index of the knowledge to update
         if let index = knowledgeCards.firstIndex(where: { $0.id == knowledge.id }) {
             knowledgeCards[index] = knowledge
-            saveKnowledgeCards(knowledgeCards)
         } else {
-            // If not found, append the new knowledge
             knowledgeCards.append(knowledge)
-            saveKnowledgeCards(knowledgeCards)
         }
+        saveKnowledgeCards(knowledgeCards)
     }
 
+    @MainActor
     func deleteKnowledge(knowledge: Knowledge) {
         var knowledgeCards = loadKnowledgeCards()
         knowledgeCards.removeAll { $0.id == knowledge.id }
         saveKnowledgeCards(knowledgeCards)
     }
 }
+
