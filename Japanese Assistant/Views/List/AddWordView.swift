@@ -15,6 +15,7 @@ struct AddWordView: View {
     @State private var example = ""
     @State private var isTranslating = false // Track if translation is in progress
     @State private var showSaveConfirmation = false // Track if the "Saved Successfully" popup should be shown
+    @StateObject private var chatViewModel = ChatViewModel()
 
     private let translationService = TranslationService()
 
@@ -50,7 +51,15 @@ struct AddWordView: View {
                             TextField("Phonetic", text: $phonetic)
                             TextField("Kanji, leave blank if none", text: $kanji)
                             TextField("English translation", text: $english)
-                            TextField("Example Sentence, optional", text: $example)
+                            HStack {
+                                TextField("Example Sentence, optional", text: $example)
+                                Button(action: {
+                                    generateExample()
+                                }) {
+                                    Image(systemName: "wand.and.stars")
+                                }
+                                .disabled(phonetic.isEmpty && english.isEmpty)
+                            }
                         }
                     }
                 }
@@ -85,6 +94,9 @@ struct AddWordView: View {
                     .transition(.opacity)
                     .animation(.easeInOut, value: showSaveConfirmation)
                 }
+            }
+            .onAppear {
+                chatViewModel.setup()
             }
         }
     }
@@ -124,6 +136,14 @@ struct AddWordView: View {
         showSaveConfirmation = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             showSaveConfirmation = false
+        }
+    }
+
+    // Generate an example sentence using AI
+    private func generateExample() {
+        let wordToUse = phonetic.isEmpty ? english : phonetic
+        chatViewModel.generateExampleSentence(for: wordToUse) { sentence in
+            example = sentence
         }
     }
 }

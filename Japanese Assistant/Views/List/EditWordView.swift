@@ -14,6 +14,7 @@ struct EditWordView: View {
     @State private var english: String
     @State private var example: String
     @State private var showWebView = false
+    @StateObject private var chatViewModel = ChatViewModel()
     @Environment(\.dismiss) var dismiss
     var word: Word
 
@@ -32,7 +33,15 @@ struct EditWordView: View {
                     TextField("Phonetic", text: $phonetic)
                     TextField("Kanji, leave blank if none", text: $kanji)
                     TextField("English translation", text: $english)
-                    TextField("Example Sentence, optional", text: $example)
+                    HStack {
+                        TextField("Example Sentence, optional", text: $example)
+                        Button(action: {
+                            generateExample()
+                        }) {
+                            Image(systemName: "wand.and.stars")
+                        }
+                        .disabled(phonetic.isEmpty && english.isEmpty)
+                    }
                 }
 
                 Section {
@@ -71,6 +80,9 @@ struct EditWordView: View {
             .sheet(isPresented: $showWebView) {
                 WebView(url: URL(string: "https://takoboto.jp/?q=\(phonetic.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")")!)
             }
+            .onAppear {
+                chatViewModel.setup()
+            }
         }
     }
 
@@ -98,6 +110,14 @@ struct EditWordView: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+
+    // Generate an example sentence using AI
+    private func generateExample() {
+        let wordToUse = phonetic.isEmpty ? english : phonetic
+        chatViewModel.generateExampleSentence(for: wordToUse) { sentence in
+            example = sentence
+        }
     }
 }
 

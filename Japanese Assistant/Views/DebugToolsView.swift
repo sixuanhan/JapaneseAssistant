@@ -20,7 +20,7 @@ struct DebugToolsView: View {
     }
     
     func restoreUserDefaultsFromPlist() {
-        if let path = Bundle.main.path(forResource: "com.sixuanhan.japass.Japanese-Assistant", ofType: "plist"),
+        if let path = Bundle.main.path(forResource: "com.sixuanhan.Japanese-Assistant", ofType: "plist"),
            let oldDefaults = NSDictionary(contentsOfFile: path) as? [String: Any] {
             
             for (key, value) in oldDefaults {
