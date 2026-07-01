@@ -45,5 +45,20 @@ class KnowledgeManager {
         knowledgeCards.removeAll { $0.id == knowledge.id }
         saveKnowledgeCards(knowledgeCards)
     }
+
+    @MainActor
+    func loadSampleSentences() -> [Knowledge] {
+        let uid = AuthViewModel.shared?.userSession?.uid
+        return LocalDataStore.loadSampleSentences(uid: uid)
+    }
+
+    @MainActor
+    func saveSampleSentences(_ sampleSentences: [Knowledge]) {
+        if let auth = AuthViewModel.shared, auth.userSession != nil {
+            auth.setSampleSentences(sampleSentences)
+        } else {
+            LocalDataStore.saveSampleSentences(sampleSentences, uid: nil)
+        }
+    }
 }
 

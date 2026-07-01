@@ -89,7 +89,8 @@ class AuthViewModel: ObservableObject {
                 username: fullname,
                 email: email,
                 wordBank: localWordBank,
-                knowledgeCards: localKnowledge
+                knowledgeCards: localKnowledge,
+                sampleSentences: LocalDataStore.loadSampleSentences(uid: nil)
             )
             self.currentUser = user
 
@@ -232,6 +233,14 @@ class AuthViewModel: ObservableObject {
         pushCurrentUserToCloud(uid: uid)
     }
 
+    func setSampleSentences(_ cards: [Knowledge]) {
+        guard let uid = userSession?.uid else { return }
+        currentUser?.sampleSentences = cards
+        LocalDataStore.saveSampleSentences(cards, uid: uid)
+        LocalDataStore.setPendingSync(true, uid: uid)
+        pushCurrentUserToCloud(uid: uid)
+    }
+
     // MARK: - Sync
 
     /// Called on app launch and whenever the app returns to the foreground.
@@ -249,7 +258,8 @@ class AuthViewModel: ObservableObject {
                 username: Auth.auth().currentUser?.displayName ?? "",
                 email: Auth.auth().currentUser?.email ?? "",
                 wordBank: LocalDataStore.loadWordBank(uid: uid),
-                knowledgeCards: LocalDataStore.loadKnowledgeCards(uid: uid)
+                knowledgeCards: LocalDataStore.loadKnowledgeCards(uid: uid),
+                sampleSentences: LocalDataStore.loadSampleSentences(uid: uid)
             )
         }
 
@@ -414,6 +424,24 @@ enum LocalDataStore {
         if let encoded = try? JSONEncoder().encode(cards) {
             UserDefaults.standard.set(encoded, forKey: knowledgeKey(uid: uid))
         }
+    }
+
+    static func loadSampleSentences(uid: String?) -> [Knowledge] {
+        guard let data = UserDefaults.standard.data(forKey: sampleSentencesKey(uid: uid)),
+              let decoded = try? JSONDecoder().decode([Knowledge].self, from: data) else {
+            return []
+        }
+        return decoded
+    }
+
+    static func saveSampleSentences(_ cards: [Knowledge], uid: String?) {
+        if let encoded = try? JSONEncoder().encode(cards) {
+            UserDefaults.standard.set(encoded, forKey: sampleSentencesKey(uid: uid))
+        }
+    }
+
+    private static func sampleSentencesKey(uid: String?) -> String {
+        "sample_sentences_\(uid ?? "anonymous")"
     }
 
     // MARK: Sync flags

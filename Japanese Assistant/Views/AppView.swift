@@ -13,7 +13,7 @@ struct AppView: View {
         case knowledge
         case practice
         case translation
-        case chat
+        case sampleSentences
         case profile
     }
 
@@ -43,11 +43,11 @@ struct AppView: View {
                 }
                 .tag(Tab.translation)
 
-            ChatView()
+            SampleSentencesView()
                 .tabItem {
-                    Label("Chat", systemImage: "message")
+                    Label("Sample Sentences", systemImage: "text.quote")
                 }
-                .tag(Tab.chat)
+                .tag(Tab.sampleSentences)
 
             ProfileView()
                 .tabItem {
