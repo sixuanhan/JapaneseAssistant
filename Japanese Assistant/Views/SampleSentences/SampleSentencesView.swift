@@ -141,7 +141,7 @@ struct SampleSentencesView: View {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Save") {
                                 let trimmedSentence = sentenceText.trimmingCharacters(in: .whitespacesAndNewlines)
-                                let trimmedNote = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let trimmedNote = noteText.strippingMarkdown()
                                 guard !trimmedSentence.isEmpty, !trimmedNote.isEmpty else { return }
 
                                 let entry = Knowledge(id: selectedSentence?.id ?? UUID(), text: "Sentence: \(trimmedSentence)\n\nNote:\n\(trimmedNote)")
@@ -245,7 +245,7 @@ struct SampleSentenceDetailView: View {
                 if isEditingMode {
                     Button("Save") {
                         let trimmedSentence = editedSentence.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let trimmedNote = editedNote.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let trimmedNote = editedNote.strippingMarkdown()
                         guard !trimmedSentence.isEmpty, !trimmedNote.isEmpty else { return }
 
                         sample = Knowledge(id: sample.id, text: "Sentence: \(trimmedSentence)\n\nNote:\n\(trimmedNote)")
@@ -286,3 +286,4 @@ struct SampleSentenceDetailView: View {
     SampleSentencesView()
         .environmentObject(AuthViewModel())
 }
+

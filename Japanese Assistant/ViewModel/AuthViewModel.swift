@@ -6,16 +6,19 @@
 //  sync layer over a per-user Firestore document.
 //
 //  Design:
-//  - LocalDataStore (UserDefaults) is the single source of truth for the
-//    UI. Reads and writes through WordBankManager / KnowledgeManager always
-//    hit it first, so the app is fully usable with no network.
-//  - Every write also fires a Firestore `setData` call. The Firestore SDK
-//    transparently queues writes when offline and replays them when
+//  - `LocalDataStore` (UserDefaults) is the source of truth for the UI.
+//    Reads and writes through `WordBankManager` / `KnowledgeManager` /
+//    `VocabGroupManager` always hit it first, so the app is fully usable
+//    with no network.
+//  - Every write also fires a Firestore `setData` call. The Firestore
+//    SDK transparently queues writes when offline and replays them when
 //    connectivity returns.
 //  - A per-uid "pending sync" flag tracks whether the local cache has
-//    changes that have not yet been confirmed by the server. The sync
-//    routine uses that flag to decide whether to push local → cloud or
-//    pull cloud → local on app launch / foreground.
+//    changes that have not yet been confirmed by the server. On app
+//    launch and every foreground transition, `syncWithCloud()` uses the
+//    flag to decide whether to push local → cloud (preserving unsynced
+//    offline edits) or pull cloud → local (adopting changes made from
+//    other devices).
 //
 
 import Foundation
@@ -31,8 +34,9 @@ protocol AuthenticationFormProtocol {
 @MainActor
 class AuthViewModel: ObservableObject {
     /// Shared instance so the legacy singleton managers
-    /// (WordBankManager / KnowledgeManager) can talk to the current
-    /// signed-in user without taking an environment object.
+    /// (`WordBankManager` / `KnowledgeManager` / `VocabGroupManager`)
+    /// can talk to the current signed-in user without taking an
+    /// environment object.
     static weak var shared: AuthViewModel?
 
     @Published var userSession: FirebaseAuth.User?
@@ -79,30 +83,27 @@ class AuthViewModel: ObservableObject {
             let result = try await Auth.auth().createUser(withEmail: email, password: password)
             self.userSession = result.user
 
-            // Seed the new user document with whatever the user already had
-            // stored locally so anonymous-era data isn't lost on first sign up.
-            let localWordBank = LocalDataStore.loadWordBank(uid: nil)
-            let localKnowledge = LocalDataStore.loadKnowledgeCards(uid: nil)
-
+            // Seed the new user document with whatever the user already
+            // had stored locally so anonymous-era data isn't lost.
             let user = User(
                 id: result.user.uid,
                 username: fullname,
                 email: email,
-                wordBank: localWordBank,
-                knowledgeCards: localKnowledge,
-                sampleSentences: LocalDataStore.loadSampleSentences(uid: nil)
+                wordBank: LocalDataStore.loadWordBank(uid: nil),
+                vocabGroups: LocalDataStore.loadVocabGroups(uid: nil),
+                knowledgeCards: LocalDataStore.loadKnowledgeCards(uid: nil),
+                sampleSentences: LocalDataStore.loadSampleSentences(uid: nil),
+                updatedAt: Date()
             )
             self.currentUser = user
 
             // Persist into the per-uid local cache so subsequent offline
             // launches see the data even before the server round-trip.
-            LocalDataStore.saveWordBank(localWordBank, uid: user.id)
-            LocalDataStore.saveKnowledgeCards(localKnowledge, uid: user.id)
+            persistLocally(user: user, uid: user.id, timestamp: user.updatedAt ?? Date())
             LocalDataStore.setPendingSync(true, uid: user.id)
-
-            // Fire-and-forget the cloud write; Firestore queues offline.
-            pushCurrentUserToCloud(uid: user.id)
             LocalDataStore.markLegacyMigrated(uid: user.id)
+
+            queueCloudPush(uid: user.id)
         } catch let error as NSError {
             if let authError = AuthErrorCode(rawValue: error._code) {
                 switch authError {
@@ -211,83 +212,121 @@ class AuthViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Data Mutators (called by WordBankManager / KnowledgeManager)
+    // MARK: - Data Mutators
+    //
+    // Called by WordBankManager / KnowledgeManager / VocabGroupManager
+    // whenever a UI mutation lands. Each one funnels through
+    // `markUserModified` so the "stamp updatedAt → save every collection
+    // locally → mark pending → queue cloud push" sequence lives in one
+    // place. Silent no-ops when signed out — anonymous edits go directly
+    // to `LocalDataStore(uid: nil)` through the manager facades and get
+    // migrated on the next sign-in.
 
-    /// Records a word-bank change. The local cache is updated synchronously,
-    /// a pending-sync flag is set, and a Firestore write is queued. If the
-    /// device is offline the write sits in Firestore's outbox and replays
-    /// automatically once connectivity returns.
     func setWordBank(_ wordBank: [Word]) {
         guard let uid = userSession?.uid else { return }
-        currentUser?.wordBank = wordBank
-        LocalDataStore.saveWordBank(wordBank, uid: uid)
-        LocalDataStore.setPendingSync(true, uid: uid)
-        pushCurrentUserToCloud(uid: uid)
+        markUserModified(uid: uid) { $0.wordBank = wordBank }
+    }
+
+    func setVocabGroups(_ vocabGroups: [VocabGroup]) {
+        guard let uid = userSession?.uid else { return }
+        markUserModified(uid: uid) { $0.vocabGroups = vocabGroups }
+    }
+
+    func updateVocabGroup(_ group: VocabGroup) {
+        guard let uid = userSession?.uid else { return }
+        markUserModified(uid: uid) { $0.updateVocabGroup(group) }
+    }
+
+    func removeVocabGroup(id: UUID) {
+        guard let uid = userSession?.uid else { return }
+        markUserModified(uid: uid) { $0.removeVocabGroup(id: id) }
     }
 
     func setKnowledgeCards(_ cards: [Knowledge]) {
         guard let uid = userSession?.uid else { return }
-        currentUser?.knowledgeCards = cards
-        LocalDataStore.saveKnowledgeCards(cards, uid: uid)
-        LocalDataStore.setPendingSync(true, uid: uid)
-        pushCurrentUserToCloud(uid: uid)
+        markUserModified(uid: uid) { $0.knowledgeCards = cards }
     }
 
     func setSampleSentences(_ cards: [Knowledge]) {
         guard let uid = userSession?.uid else { return }
-        currentUser?.sampleSentences = cards
-        LocalDataStore.saveSampleSentences(cards, uid: uid)
+        markUserModified(uid: uid) { $0.sampleSentences = cards }
+    }
+
+    /// Applies `mutate` to `currentUser` (hydrating from the local cache
+    /// if needed), stamps `updatedAt = now`, writes every collection to
+    /// the per-uid `LocalDataStore` synchronously, flips the pending-sync
+    /// flag, and queues a Firestore push.
+    ///
+    /// Persisting every collection on each mutation keeps the on-disk
+    /// snapshot consistent with `currentUser` at all times — which is
+    /// the invariant `pullCloudToLocal` relies on when it reads the
+    /// local baseline for merging.
+    private func markUserModified(uid: String, mutate: (inout User) -> Void) {
+        var user = currentUser ?? hydrateFromLocalCache(uid: uid)
+        mutate(&user)
+        let now = Date()
+        user.updatedAt = now
+        currentUser = user
+        persistLocally(user: user, uid: uid, timestamp: now)
         LocalDataStore.setPendingSync(true, uid: uid)
-        pushCurrentUserToCloud(uid: uid)
+        queueCloudPush(uid: uid)
+    }
+
+    private func persistLocally(user: User, uid: String, timestamp: Date) {
+        LocalDataStore.saveWordBank(user.wordBank, uid: uid)
+        LocalDataStore.saveVocabGroups(user.vocabGroups, uid: uid)
+        LocalDataStore.saveKnowledgeCards(user.knowledgeCards, uid: uid)
+        LocalDataStore.saveSampleSentences(user.sampleSentences, uid: uid)
+        LocalDataStore.saveLastLocalUpdate(timestamp, uid: uid)
+    }
+
+    private func hydrateFromLocalCache(uid: String) -> User {
+        User(
+            id: uid,
+            username: Auth.auth().currentUser?.displayName ?? currentUser?.username ?? "",
+            email: Auth.auth().currentUser?.email ?? currentUser?.email ?? "",
+            wordBank: LocalDataStore.loadWordBank(uid: uid),
+            vocabGroups: LocalDataStore.loadVocabGroups(uid: uid),
+            knowledgeCards: LocalDataStore.loadKnowledgeCards(uid: uid),
+            sampleSentences: LocalDataStore.loadSampleSentences(uid: uid),
+            updatedAt: LocalDataStore.loadLastLocalUpdate(uid: uid)
+        )
     }
 
     // MARK: - Sync
 
-    /// Called on app launch and whenever the app returns to the foreground.
-    /// Decides whether to push local → cloud or pull cloud → local based on
-    /// the pending-sync flag, so unsynced offline edits are never silently
-    /// overwritten by a stale cloud snapshot.
+    /// Called on app launch and whenever the app returns to the
+    /// foreground. Decides whether to push local → cloud or pull cloud
+    /// → local based on the pending-sync flag, so unsynced offline edits
+    /// are never silently overwritten by a stale cloud snapshot.
     func syncWithCloud() async {
         guard let uid = userSession?.uid else { return }
 
-        // First populate currentUser from the local cache so the UI has
-        // something to show immediately even if cloud is unreachable.
+        // Populate `currentUser` from the local cache so the UI has
+        // something to show immediately, even if the cloud round-trip
+        // fails or takes a while.
         if currentUser == nil {
-            currentUser = User(
-                id: uid,
-                username: Auth.auth().currentUser?.displayName ?? "",
-                email: Auth.auth().currentUser?.email ?? "",
-                wordBank: LocalDataStore.loadWordBank(uid: uid),
-                knowledgeCards: LocalDataStore.loadKnowledgeCards(uid: uid),
-                sampleSentences: LocalDataStore.loadSampleSentences(uid: uid)
-            )
+            currentUser = hydrateFromLocalCache(uid: uid)
         }
 
         if LocalDataStore.hasPendingSync(uid: uid) {
-            await pushLocalToCloud(uid: uid)
+            await push(uid: uid)
         } else {
             await pullCloudToLocal(uid: uid)
         }
     }
 
-    private func pushCurrentUserToCloud(uid: String) {
-        guard let user = currentUser else { return }
-        Task {
-            do {
-                try Firestore.firestore()
-                    .collection("users")
-                    .document(uid)
-                    .setData(from: user)
-                // setData completes when the write reaches the server, so
-                // it's safe to clear the pending flag here.
-                LocalDataStore.setPendingSync(false, uid: uid)
-            } catch {
-                print("DEBUG: Cloud write failed (will retry on next sync): \(error.localizedDescription)")
-            }
-        }
+    /// Fire-and-forget wrapper around `push(uid:)` used by mutators.
+    /// The Firestore SDK queues writes when offline and replays them
+    /// on reconnect, so this never blocks the caller.
+    private func queueCloudPush(uid: String) {
+        Task { await push(uid: uid) }
     }
 
-    private func pushLocalToCloud(uid: String) async {
+    /// Writes `currentUser` to Firestore. Clears the pending-sync flag
+    /// only on success — offline / transient failures leave the flag
+    /// set so the next `syncWithCloud()` will retry.
+    private func push(uid: String) async {
         guard let user = currentUser else { return }
         do {
             try Firestore.firestore()
@@ -296,7 +335,7 @@ class AuthViewModel: ObservableObject {
                 .setData(from: user)
             LocalDataStore.setPendingSync(false, uid: uid)
         } catch {
-            print("DEBUG: pushLocalToCloud failed (still offline?): \(error.localizedDescription)")
+            print("DEBUG: Cloud write failed (will retry on next sync): \(error.localizedDescription)")
         }
     }
 
@@ -311,27 +350,81 @@ class AuthViewModel: ObservableObject {
                 return
             }
             let cloudUser = try snapshot.data(as: User.self)
-            self.currentUser = cloudUser
-            LocalDataStore.saveWordBank(cloudUser.wordBank, uid: uid)
-            LocalDataStore.saveKnowledgeCards(cloudUser.knowledgeCards, uid: uid)
+            let localUser = hydrateFromLocalCache(uid: uid)
+            let mergedUser = mergeLocalAndCloud(localUser: localUser, cloudUser: cloudUser)
+            self.currentUser = mergedUser
+            LocalDataStore.saveWordBank(mergedUser.wordBank, uid: uid)
+            LocalDataStore.saveVocabGroups(mergedUser.vocabGroups, uid: uid)
+            LocalDataStore.saveKnowledgeCards(mergedUser.knowledgeCards, uid: uid)
+            LocalDataStore.saveSampleSentences(mergedUser.sampleSentences, uid: uid)
+            // Preserve the previous local timestamp when the merged user
+            // has none — nil-clobbering would erase useful sync-state
+            // information and cause the next merge to behave as though
+            // this device had never written.
+            if let updatedAt = mergedUser.updatedAt {
+                LocalDataStore.saveLastLocalUpdate(updatedAt, uid: uid)
+            }
         } catch {
             // Offline or transient failure — UI keeps using the local cache.
             print("DEBUG: pullCloudToLocal failed: \(error.localizedDescription)")
         }
     }
 
-    // MARK: - Legacy Migration (pre-Firebase UserDefaults blob)
+    /// Whole-document last-writer-wins merge policy.
+    ///
+    /// - When both sides have an `updatedAt`, the newer document wins in
+    ///   its entirety. This means a burst of edits on one device while
+    ///   another device was making unrelated edits can drop the loser's
+    ///   changes — an inherent limitation of the current design.
+    /// - When only local has a timestamp, keep local (we assume the
+    ///   local device saw the cloud earlier and moved on).
+    /// - When only cloud has a timestamp, keep cloud.
+    /// - When neither has a timestamp, fall back to whichever side has
+    ///   any data. A first-run device with no local data should adopt
+    ///   the cloud snapshot; otherwise keep local. "Empty" means every
+    ///   user-owned collection is empty.
+    private func mergeLocalAndCloud(localUser: User, cloudUser: User) -> User {
+        switch (localUser.updatedAt, cloudUser.updatedAt) {
+        case let (local?, cloud?):
+            return cloud > local ? cloudUser : localUser
+        case (_?, nil):
+            return localUser
+        case (nil, _?):
+            return cloudUser
+        case (nil, nil):
+            return isEmpty(cloudUser) ? localUser : cloudUser
+        }
+    }
 
-    /// One-shot copy of any data stored under the legacy global keys
-    /// (`WordBank`, `KnowledgeCards`) into the per-uid cache. Merged with
-    /// whatever is already in the per-uid cache; legacy ids that don't
-    /// already exist are appended.
+    private func isEmpty(_ user: User) -> Bool {
+        return user.wordBank.isEmpty
+            && user.vocabGroups.isEmpty
+            && user.knowledgeCards.isEmpty
+            && user.sampleSentences.isEmpty
+    }
+
+    // MARK: - Legacy Migration (pre-Firebase / anonymous UserDefaults blob)
+
+    /// One-shot copy of any data stored under the legacy / anonymous
+    /// UserDefaults keys into the per-uid cache. Merged with whatever is
+    /// already in the per-uid cache; ids that don't already exist are
+    /// appended (union semantics; per-uid data wins on id conflict).
+    ///
+    /// Covers all four user-owned collections so anonymous edits made
+    /// before sign-in are never orphaned.
     private func migrateLegacyLocalDataIfNeeded(uid: String) async {
         guard !LocalDataStore.hasMigratedLegacy(uid: uid) else { return }
 
         let legacyWords = LocalDataStore.loadWordBank(uid: nil)
         let legacyKnowledge = LocalDataStore.loadKnowledgeCards(uid: nil)
-        guard !legacyWords.isEmpty || !legacyKnowledge.isEmpty else {
+        let legacySampleSentences = LocalDataStore.loadSampleSentences(uid: nil)
+        let legacyVocabGroups = LocalDataStore.loadVocabGroups(uid: nil)
+
+        let anythingToMigrate = !legacyWords.isEmpty
+            || !legacyKnowledge.isEmpty
+            || !legacySampleSentences.isEmpty
+            || !legacyVocabGroups.isEmpty
+        guard anythingToMigrate else {
             LocalDataStore.markLegacyMigrated(uid: uid)
             return
         }
@@ -345,6 +438,16 @@ class AuthViewModel: ObservableObject {
         let existingKnowledgeIds = Set(perUserKnowledge.map { $0.id })
         perUserKnowledge.append(contentsOf: legacyKnowledge.filter { !existingKnowledgeIds.contains($0.id) })
         LocalDataStore.saveKnowledgeCards(perUserKnowledge, uid: uid)
+
+        var perUserSampleSentences = LocalDataStore.loadSampleSentences(uid: uid)
+        let existingSampleIds = Set(perUserSampleSentences.map { $0.id })
+        perUserSampleSentences.append(contentsOf: legacySampleSentences.filter { !existingSampleIds.contains($0.id) })
+        LocalDataStore.saveSampleSentences(perUserSampleSentences, uid: uid)
+
+        var perUserVocabGroups = LocalDataStore.loadVocabGroups(uid: uid)
+        let existingVocabGroupIds = Set(perUserVocabGroups.map { $0.id })
+        perUserVocabGroups.append(contentsOf: legacyVocabGroups.filter { !existingVocabGroupIds.contains($0.id) })
+        LocalDataStore.saveVocabGroups(perUserVocabGroups, uid: uid)
 
         LocalDataStore.setPendingSync(true, uid: uid)
         LocalDataStore.markLegacyMigrated(uid: uid)
@@ -370,103 +473,5 @@ enum AuthError: LocalizedError {
         case .unknown(let message):
             return message
         }
-    }
-}
-
-// MARK: - LocalDataStore
-//
-// All of the app's user-facing reads are served from here so the app works
-// fully offline. Pass `uid: nil` to access the legacy global blob that
-// pre-dated the Firebase migration; pass a real uid for everything else.
-
-enum LocalDataStore {
-    private static let legacyWordBankKey = "WordBank"
-    private static let legacyKnowledgeKey = "KnowledgeCards"
-
-    private static func wordBankKey(uid: String?) -> String {
-        guard let uid = uid else { return legacyWordBankKey }
-        return "WordBank_\(uid)"
-    }
-    private static func knowledgeKey(uid: String?) -> String {
-        guard let uid = uid else { return legacyKnowledgeKey }
-        return "KnowledgeCards_\(uid)"
-    }
-    private static func pendingKey(uid: String) -> String { "hasPendingSync_\(uid)" }
-    private static func migratedKey(uid: String) -> String { "didMigrateLegacy_\(uid)" }
-
-    // MARK: Word bank
-
-    static func loadWordBank(uid: String?) -> [Word] {
-        guard let data = UserDefaults.standard.data(forKey: wordBankKey(uid: uid)),
-              let decoded = try? JSONDecoder().decode([Word].self, from: data) else {
-            return []
-        }
-        return decoded
-    }
-
-    static func saveWordBank(_ wordBank: [Word], uid: String?) {
-        if let encoded = try? JSONEncoder().encode(wordBank) {
-            UserDefaults.standard.set(encoded, forKey: wordBankKey(uid: uid))
-        }
-    }
-
-    // MARK: Knowledge cards
-
-    static func loadKnowledgeCards(uid: String?) -> [Knowledge] {
-        guard let data = UserDefaults.standard.data(forKey: knowledgeKey(uid: uid)),
-              let decoded = try? JSONDecoder().decode([Knowledge].self, from: data) else {
-            return []
-        }
-        return decoded
-    }
-
-    static func saveKnowledgeCards(_ cards: [Knowledge], uid: String?) {
-        if let encoded = try? JSONEncoder().encode(cards) {
-            UserDefaults.standard.set(encoded, forKey: knowledgeKey(uid: uid))
-        }
-    }
-
-    static func loadSampleSentences(uid: String?) -> [Knowledge] {
-        guard let data = UserDefaults.standard.data(forKey: sampleSentencesKey(uid: uid)),
-              let decoded = try? JSONDecoder().decode([Knowledge].self, from: data) else {
-            return []
-        }
-        return decoded
-    }
-
-    static func saveSampleSentences(_ cards: [Knowledge], uid: String?) {
-        if let encoded = try? JSONEncoder().encode(cards) {
-            UserDefaults.standard.set(encoded, forKey: sampleSentencesKey(uid: uid))
-        }
-    }
-
-    private static func sampleSentencesKey(uid: String?) -> String {
-        "sample_sentences_\(uid ?? "anonymous")"
-    }
-
-    // MARK: Sync flags
-
-    static func hasPendingSync(uid: String) -> Bool {
-        UserDefaults.standard.bool(forKey: pendingKey(uid: uid))
-    }
-
-    static func setPendingSync(_ pending: Bool, uid: String) {
-        UserDefaults.standard.set(pending, forKey: pendingKey(uid: uid))
-    }
-
-    static func hasMigratedLegacy(uid: String) -> Bool {
-        UserDefaults.standard.bool(forKey: migratedKey(uid: uid))
-    }
-
-    static func markLegacyMigrated(uid: String) {
-        UserDefaults.standard.set(true, forKey: migratedKey(uid: uid))
-    }
-
-    static func clearAll(uid: String) {
-        let defaults = UserDefaults.standard
-        defaults.removeObject(forKey: wordBankKey(uid: uid))
-        defaults.removeObject(forKey: knowledgeKey(uid: uid))
-        defaults.removeObject(forKey: pendingKey(uid: uid))
-        defaults.removeObject(forKey: migratedKey(uid: uid))
     }
 }
