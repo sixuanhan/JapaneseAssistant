@@ -94,6 +94,9 @@ struct PracticeView: View {
         .onAppear {
             loadAndShuffleWordList()
         }
+        .onDisappear {
+            flipped = false
+        }
     }
 
     // Randomly initialize the front of the card
