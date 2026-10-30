@@ -24,7 +24,7 @@ final class ChatViewModel: ObservableObject {
 
     func setup() {
         let ai = FirebaseAI.firebaseAI(backend: .googleAI())
-        client = ai.generativeModel(modelName: "gemini-2.5-flash-lite")
+        client = ai.generativeModel(modelName: "gemini-3.5-flash")
     }
 
     // MARK: - Public prompt methods
@@ -85,7 +85,7 @@ final class ChatViewModel: ObservableObject {
 
         let wordTexts = words.map { $0.displayText }
         let prompt = """
-        You are an experienced Japanese teacher. Your student is asking you to differentiate between the following words: \(wordTexts.joined(separator: ", ")). 
+        You are an experienced Japanese teacher. Your student is asking you to differentiate between the following Japanese words: \(wordTexts.joined(separator: ", ")). 
         Create a note to explain. Be succinct. Explain in Chinese. Use bullet points and headings, but no italics or bold. 
         Always give examples. No need for intros and outros. Sample format:
         1. 【词语1】
