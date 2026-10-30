@@ -10,10 +10,10 @@ import SwiftUI
 struct AppView: View {
     enum Tab {
         case list
-        case knowledge
         case practice
-        case translation
         case sampleSentences
+        case knowledge
+        case translation
         case profile
     }
 
@@ -25,29 +25,29 @@ struct AppView: View {
                 }
                 .tag(Tab.list)
 
-            KnowledgeView()
-                .tabItem {
-                    Label("Knowledge", systemImage: "book")
-                }
-                .tag(Tab.knowledge)
-
             PracticeView()
                 .tabItem {
                     Label("Practice", systemImage: "pencil")
                 }
                 .tag(Tab.practice)
 
-            TranslationView()
-                .tabItem {
-                    Label("Translation", systemImage: "text.bubble")
-                }
-                .tag(Tab.translation)
-
             SampleSentencesView()
                 .tabItem {
                     Label("Sample Sentences", systemImage: "text.quote")
                 }
                 .tag(Tab.sampleSentences)
+
+            KnowledgeView()
+                .tabItem {
+                    Label("Knowledge", systemImage: "book")
+                }
+                .tag(Tab.knowledge)
+
+            TranslationView()
+                .tabItem {
+                    Label("Translation", systemImage: "text.bubble")
+                }
+                .tag(Tab.translation)
 
             ProfileView()
                 .tabItem {

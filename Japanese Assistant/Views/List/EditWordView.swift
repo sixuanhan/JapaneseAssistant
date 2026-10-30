@@ -21,6 +21,7 @@ struct EditWordView: View {
     @State private var kanji: String
     @State private var english: String
     @State private var example: String
+    @State private var phoneticMemberIDs: Set<UUID>?
     @State private var vocabGroupNote: String
     /// Sibling ids that will share `currentGroupId` after Save. Never
     /// includes `word.id`. Initialised in `loadExistingWords` from the
@@ -56,6 +57,7 @@ struct EditWordView: View {
         NavigationStack {
             Form {
                 editWordSection
+                PhoneticGroupSection(wordID: word.id, phonetic: phonetic, selectedMemberIDs: $phoneticMemberIDs)
                 vocabGroupSection
                 vocabGroupNoteSection
                 actionsSection
@@ -171,8 +173,7 @@ struct EditWordView: View {
     @ViewBuilder
     private var joinGroupPrompt: some View {
         if isAddingToGroup {
-            searchField
-            searchResultsList(showsCheckmark: false) { existing in
+            WordGroupSearch(words: allWords, query: $vocabGroupSearchQuery) { existing in
                 addWordToVocabGroup(existing)
             }
         } else {
@@ -212,45 +213,8 @@ struct EditWordView: View {
             }
         }
 
-        searchField
-        searchResultsList(showsCheckmark: true) { existing in
+        WordGroupSearch(words: allWords, query: $vocabGroupSearchQuery, selectedIDs: selectedGroupIds) { existing in
             toggleSelection(for: existing.id)
-        }
-    }
-
-    private var searchField: some View {
-        TextField("Search vocab...", text: $vocabGroupSearchQuery)
-            .textFieldStyle(RoundedBorderTextFieldStyle())
-    }
-
-    @ViewBuilder
-    private func searchResultsList(showsCheckmark: Bool, onTap: @escaping (Word) -> Void) -> some View {
-        if vocabGroupSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            Text("Type a word to search")
-                .foregroundColor(.secondary)
-        } else if searchResults.isEmpty {
-            Text("No matching vocab words.")
-                .foregroundColor(.secondary)
-        } else {
-            ForEach(searchResults) { existing in
-                Button {
-                    onTap(existing)
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(existing.displayText)
-                            Text(existing.English)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        if showsCheckmark && selectedGroupIds.contains(existing.id) {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 
@@ -314,18 +278,6 @@ struct EditWordView: View {
 
     private func selectedGroupWords() -> [Word] {
         allWords.filter { selectedGroupIds.contains($0.id) }
-    }
-
-    private var searchResults: [Word] {
-        let query = vocabGroupSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !query.isEmpty else {
-            return []
-        }
-        return allWords.filter { word in
-            word.Phonetic.lowercased().contains(query) ||
-            word.Kanji.lowercased().contains(query) ||
-            word.English.lowercased().contains(query)
-        }
     }
 
     private func buildVocabGroupNotePrompt() -> [Word] {
@@ -411,7 +363,7 @@ struct EditWordView: View {
             return existing
         }
 
-        WordBankManager.shared.saveWordBank(wordList)
+        WordBankManager.shared.saveWordBank(wordList, phoneticWordID: word.id, phoneticMemberIDs: phoneticMemberIDs)
 
         if let updatedGroupId {
             let members = wordList.filter { $0.vocabGroupId == updatedGroupId }

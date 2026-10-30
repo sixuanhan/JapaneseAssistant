@@ -18,6 +18,8 @@ import SwiftUI
 
 struct AddWordView: View {
     @State private var inputText: String = ""
+    @State private var newWordID = UUID()
+    @State private var phoneticMemberIDs: Set<UUID>?
     @State private var phonetic = ""
     @State private var kanji = ""
     @State private var english = ""
@@ -48,6 +50,7 @@ struct AddWordView: View {
                     }
                     Form {
                         editWordSection
+                        PhoneticGroupSection(wordID: newWordID, phonetic: phonetic, selectedMemberIDs: $phoneticMemberIDs)
                         vocabGroupSection
                         vocabGroupNoteSection
                     }
@@ -100,35 +103,8 @@ struct AddWordView: View {
     @ViewBuilder
     private var vocabGroupSection: some View {
         Section(header: Text("Vocab Group")) {
-            TextField("Search vocab...", text: $vocabGroupSearchQuery)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-
-            if vocabGroupSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Type a word to search")
-                    .foregroundColor(.secondary)
-            } else if matchingGroupWords.isEmpty {
-                Text("No matching vocab words.")
-                    .foregroundColor(.secondary)
-            } else {
-                ForEach(matchingGroupWords) { existing in
-                    Button {
-                        toggleSelection(for: existing.id)
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(existing.displayText)
-                                Text(existing.English)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            if selectedGroupIds.contains(existing.id) {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
+            WordGroupSearch(words: allWords, query: $vocabGroupSearchQuery, selectedIDs: selectedGroupIds) { existing in
+                toggleSelection(for: existing.id)
             }
         }
     }
@@ -220,18 +196,6 @@ struct AddWordView: View {
         updateVocabGroupNote()
     }
 
-    private var matchingGroupWords: [Word] {
-        let query = vocabGroupSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !query.isEmpty else {
-            return []
-        }
-        return allWords.filter { word in
-            word.Phonetic.lowercased().contains(query) ||
-            word.Kanji.lowercased().contains(query) ||
-            word.English.lowercased().contains(query)
-        }
-    }
-
     private func buildVocabGroupNotePrompt() -> [Word] {
         let currentWord = Word(
             Phonetic: phonetic,
@@ -268,6 +232,7 @@ struct AddWordView: View {
         let hasGroup = !selectedGroupIds.isEmpty
         let vocabGroupId = hasGroup ? (currentGroupId ?? UUID()) : nil
         let newWord = Word(
+            id: newWordID,
             Phonetic: phonetic,
             Kanji: kanji,
             English: english,
@@ -296,7 +261,7 @@ struct AddWordView: View {
             return updated
         }
         wordList.append(newWord)
-        WordBankManager.shared.saveWordBank(wordList)
+        WordBankManager.shared.saveWordBank(wordList, phoneticWordID: newWord.id, phoneticMemberIDs: phoneticMemberIDs)
 
         if let vocabGroupId {
             let members = wordList.filter { $0.vocabGroupId == vocabGroupId }
@@ -308,6 +273,8 @@ struct AddWordView: View {
             VocabGroupManager.shared.pruneEmptyGroups(with: wordList)
         }
 
+        newWordID = UUID()
+        phoneticMemberIDs = nil
         showSaveConfirmation = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             showSaveConfirmation = false
