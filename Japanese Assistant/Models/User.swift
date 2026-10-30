@@ -18,6 +18,11 @@ struct User: Identifiable, Codable, Hashable {
     /// merge policy to decide which side to trust.
     var updatedAt: Date?
 
+    // Membership is persisted on words so group edits share the word bank's offline sync boundary.
+    var phoneticGroups: [PhoneticGroup] {
+        PhoneticGroup.groups(in: wordBank)
+    }
+
     enum CodingKeys: String, CodingKey {
         case id, username, email, wordBank, vocabGroups, knowledgeCards, sampleSentences, updatedAt
     }

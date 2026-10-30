@@ -20,7 +20,11 @@ class WordBankManager {
     }
 
     @MainActor
-    func saveWordBank(_ wordBank: [Word]) {
+    func saveWordBank(_ incoming: [Word], phoneticWordID: UUID? = nil, phoneticMemberIDs: Set<UUID>? = nil) {
+        var wordBank = PhoneticGrouping.reconcile(incoming, previous: loadWordBank())
+        if let phoneticWordID, let phoneticMemberIDs {
+            wordBank = PhoneticGrouping.setMembers(of: phoneticWordID, selectedIDs: phoneticMemberIDs, in: wordBank)
+        }
         if let auth = AuthViewModel.shared, auth.userSession != nil {
             // Signed in: AuthViewModel persists locally AND queues cloud sync.
             auth.setWordBank(wordBank)

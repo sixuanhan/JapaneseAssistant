@@ -21,6 +21,7 @@ struct EditWordView: View {
     @State private var kanji: String
     @State private var english: String
     @State private var example: String
+    @State private var phoneticMemberIDs: Set<UUID>?
     @State private var vocabGroupNote: String
     /// Sibling ids that will share `currentGroupId` after Save. Never
     /// includes `word.id`. Initialised in `loadExistingWords` from the
@@ -56,6 +57,7 @@ struct EditWordView: View {
         NavigationStack {
             Form {
                 editWordSection
+                PhoneticGroupSection(wordID: word.id, phonetic: phonetic, selectedMemberIDs: $phoneticMemberIDs)
                 vocabGroupSection
                 vocabGroupNoteSection
                 actionsSection
@@ -411,7 +413,7 @@ struct EditWordView: View {
             return existing
         }
 
-        WordBankManager.shared.saveWordBank(wordList)
+        WordBankManager.shared.saveWordBank(wordList, phoneticWordID: word.id, phoneticMemberIDs: phoneticMemberIDs)
 
         if let updatedGroupId {
             let members = wordList.filter { $0.vocabGroupId == updatedGroupId }

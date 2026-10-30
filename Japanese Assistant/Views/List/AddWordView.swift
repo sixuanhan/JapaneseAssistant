@@ -18,6 +18,8 @@ import SwiftUI
 
 struct AddWordView: View {
     @State private var inputText: String = ""
+    @State private var newWordID = UUID()
+    @State private var phoneticMemberIDs: Set<UUID>?
     @State private var phonetic = ""
     @State private var kanji = ""
     @State private var english = ""
@@ -48,6 +50,7 @@ struct AddWordView: View {
                     }
                     Form {
                         editWordSection
+                        PhoneticGroupSection(wordID: newWordID, phonetic: phonetic, selectedMemberIDs: $phoneticMemberIDs)
                         vocabGroupSection
                         vocabGroupNoteSection
                     }
@@ -268,6 +271,7 @@ struct AddWordView: View {
         let hasGroup = !selectedGroupIds.isEmpty
         let vocabGroupId = hasGroup ? (currentGroupId ?? UUID()) : nil
         let newWord = Word(
+            id: newWordID,
             Phonetic: phonetic,
             Kanji: kanji,
             English: english,
@@ -296,7 +300,7 @@ struct AddWordView: View {
             return updated
         }
         wordList.append(newWord)
-        WordBankManager.shared.saveWordBank(wordList)
+        WordBankManager.shared.saveWordBank(wordList, phoneticWordID: newWord.id, phoneticMemberIDs: phoneticMemberIDs)
 
         if let vocabGroupId {
             let members = wordList.filter { $0.vocabGroupId == vocabGroupId }
@@ -308,6 +312,8 @@ struct AddWordView: View {
             VocabGroupManager.shared.pruneEmptyGroups(with: wordList)
         }
 
+        newWordID = UUID()
+        phoneticMemberIDs = nil
         showSaveConfirmation = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             showSaveConfirmation = false

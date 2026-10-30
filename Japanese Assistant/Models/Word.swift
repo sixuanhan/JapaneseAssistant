@@ -22,6 +22,7 @@ struct Word: Codable, Identifiable, Hashable {
     /// `Word.vocabGroupId` is the source of truth for group membership;
     /// `VocabGroup.wordMembers` is derived from it.
     var vocabGroupId: UUID?
+    var phoneticGroupId: UUID?
 
     /// UX-facing label. Prefers Kanji, then Phonetic, then English —
     /// this fallback order is a stable contract that `ListView`,
@@ -45,7 +46,8 @@ struct Word: Codable, Identifiable, Hashable {
         English: String,
         example: String,
         nextDueDate: Date,
-        vocabGroupId: UUID? = nil
+        vocabGroupId: UUID? = nil,
+        phoneticGroupId: UUID? = nil
     ) {
         self.id = id
         self.Phonetic = Phonetic
@@ -54,10 +56,11 @@ struct Word: Codable, Identifiable, Hashable {
         self.example = example
         self.nextDueDate = nextDueDate
         self.vocabGroupId = vocabGroupId
+        self.phoneticGroupId = phoneticGroupId
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, Phonetic, Kanji, English, example, nextDueDate, vocabGroupId
+        case id, Phonetic, Kanji, English, example, nextDueDate, vocabGroupId, phoneticGroupId
     }
 
     // Custom decoder tolerates old blobs written before `vocabGroupId`
@@ -74,6 +77,7 @@ struct Word: Codable, Identifiable, Hashable {
         example = try container.decodeIfPresent(String.self, forKey: .example) ?? ""
         nextDueDate = try container.decodeIfPresent(Date.self, forKey: .nextDueDate) ?? Date()
         vocabGroupId = try container.decodeIfPresent(UUID.self, forKey: .vocabGroupId)
+        phoneticGroupId = try container.decodeIfPresent(UUID.self, forKey: .phoneticGroupId)
     }
 
     // Identity is defined by `id` alone so `Set<Word>` and
