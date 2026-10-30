@@ -90,7 +90,16 @@ struct ListView: View {
             }
             .sheet(isPresented: Binding(
                 get: { showEditWordView && selectedWord != nil },
-                set: { if !$0 { showEditWordView = false; selectedWord = nil } }
+                set: { newValue in
+                    if !newValue {
+                        showEditWordView = false
+                        selectedWord = nil
+                        // Sheet just closed — the edit may have moved the
+                        // word into a vocab group. Reload so the row and
+                        // any subsequent Edit sheet see the fresh state.
+                        reloadWordList()
+                    }
+                }
             )) {
                 if let word = selectedWord {
                     EditWordView(word: word)
